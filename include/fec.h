@@ -1,44 +1,60 @@
+#ifndef FEC_H
+#define FEC_H
+
+typedef struct packet packet;
+typedef struct fec_param fec_param;
 typedef struct fec fec;
-typedef struct fec_op fec_op;
 
-struct fec_op {
-    int (*encode)(void *data, int size, void *pkt, int *pkt_size);
-    int (*decode)(void *data, int size, void *pkt, int *pkt_size);
+typedef unsigned char GF_ELEMENT;
+
+struct packet {
+  void *buf;
+  int size;
 };
 
-struct fec {}
-    void *data;
-    fec_op *op;
+struct fec_param {
+  int gf_power;      // power of the galois field (2^gf_power)
+  int gen_size;      // number of symbols in a generation
+  int symbol_size;   // size of a symbol in bytes
+  int k;             // fec(n, k)
+  unsigned short pt; // payload type
 };
 
-int fec_create(fec **f, fec_op *op) {
-    *f = malloc(sizeof(fec));
-    if (!*f) return -1;
-    (*f)->data = op->create();
-    if (!(*f)->data) {
-        free(*f);
-        return -1;
-    }
-    (*f)->op = op;
-    return 0;
-}
+struct fec {
+  struct fec_param *param;
+  unsigned short seq;
+  int rank; // rank of the matrix
 
-int fec_destroy(fec *f) {
-    f->op->destroy(f->data);
-    free(f);
-    return 0;
-}
+  GF_ELEMENT **coeff_mat;   // coefficient matrix
+  GF_ELEMENT **payload_mat; // payload matrix
+};
+
+int fec_init(fec *ctx, fec_param *param);
 
 /*
- * A wapper for fec_op->encode
+ * Encode the RTP packet into FEC packets
+ *
+ * @param ctx
+ * @param pkt       The RTP packet
+ * @param len       The length of the RTP packet
+ * @param out_pkts  The output FEC packets (Encapsulated in a new RTP packet)
+ * @param count     The number of FEC packets been generated
+ *
+ * @return          0 if success, -1 if failed
  */
-int fec_encode(fec *f, void *data, int size, void *pkt, int *pkt_size) {
-    return f->op->encode(f->data, data, size, pkt, pkt_size);
-}
+int fec_encode(fec *ctx, void *pkt, int len, packet out_pkts[], int *count);
 
 /*
- * A wapper for fec_op->decode
+ * Decode the FEC packet into RTP packets
+ *
+ * @param ctx
+ * @param pkt       The incomming RTP packet
+ * @param len       The length of the RTP packet
+ * @param out_pkts  RTP packets that been decoded
+ * @param count     The number of RTP packets that been decoded
+ *
+ * @return          0 if success, -1 if failed
  */
-int fec_decode(fec *f, void *data, int size, void *pkt, int *pkt_size) {
-    return f->op->decode(f->data, data, size, pkt, pkt_size);
-}
+int fec_decode(fec *ctx, void *pkt, int len, packet out_pkts[], int *count);
+
+#endif /* FEC_H */
