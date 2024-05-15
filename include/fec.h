@@ -1,6 +1,8 @@
 #ifndef FEC_H
 #define FEC_H
 
+#define RTP_HEADER_SIZE 12
+
 typedef struct packet packet;
 typedef struct fec_param fec_param;
 typedef struct fec fec;
@@ -8,28 +10,36 @@ typedef struct fec fec;
 typedef unsigned char GF_ELEMENT;
 
 struct packet {
-  void *buf;
-  int size;
+    void *buf;
+    int size;
 };
 
 struct fec_param {
-  int gf_power;      // power of the galois field (2^gf_power)
-  int gen_size;      // number of symbols in a generation
-  int symbol_size;   // size of a symbol in bytes
-  int k;             // fec(n, k)
-  unsigned short pt; // payload type
+    int gf_power;      // power of the galois field (2^gf_power)
+    int gen_size;      // number of symbols in a generation
+    int symbol_size;   // size of a symbol in bytes
+    int n;             // fec(n, k)
+    unsigned short pt; // payload type, used to identify the source RTP & repair RTP
 };
 
 struct fec {
-  struct fec_param *param;
-  unsigned short seq;
-  int rank; // rank of the matrix
+    struct fec_param *param;
+    unsigned short seq;
+    int rank; // rank of the matrix
 
-  GF_ELEMENT **coeff_mat;   // coefficient matrix
-  GF_ELEMENT **payload_mat; // payload matrix
+    GF_ELEMENT **coeff_mat;   // coefficient matrix
+    GF_ELEMENT **payload_mat; // payload matrix
 };
 
-int fec_init(fec *ctx, fec_param *param);
+/*
+ * Initialize the fec context
+ *
+ * @param ctx      The fec context
+ * @param param    The fec parameters
+ *
+ * @return         0 if success, -1 if failed
+ */
+int fec_init(fec **ctx, fec_param *param);
 
 /*
  * Encode the RTP packet into FEC packets
@@ -42,7 +52,7 @@ int fec_init(fec *ctx, fec_param *param);
  *
  * @return          0 if success, -1 if failed
  */
-int fec_encode(fec *ctx, void *pkt, int len, packet out_pkts[], int *count);
+int fec_encode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count);
 
 /*
  * Decode the FEC packet into RTP packets
@@ -55,6 +65,15 @@ int fec_encode(fec *ctx, void *pkt, int len, packet out_pkts[], int *count);
  *
  * @return          0 if success, -1 if failed
  */
-int fec_decode(fec *ctx, void *pkt, int len, packet out_pkts[], int *count);
+int fec_decode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count);
+
+/*
+ * Free the fec context
+ *
+ * @param ctx
+ *
+ * @return          0 if success, -1 if failed
+ */
+int fec_free(fec *ctx);
 
 #endif /* FEC_H */
