@@ -2,6 +2,8 @@
 #define FEC_H
 
 #define RTP_HEADER_SIZE 12
+#define MAX_COEFF_LEN 255
+#define MAX_PAYLOAD_LEN 1400
 
 typedef struct packet packet;
 typedef struct fec_param fec_param;
@@ -9,9 +11,17 @@ typedef struct fec fec;
 
 typedef unsigned char GF_ELEMENT;
 
+struct fec_packet {
+    unsigned char coeff[MAX_COEFF_LEN];
+    int coeff_len;
+
+    unsigned char payload[MAX_PAYLOAD_LEN];
+    int payload_len;
+};
+
 struct packet {
     void *buf;
-    int size;
+    int len;
 };
 
 struct fec_param {

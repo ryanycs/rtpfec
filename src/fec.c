@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "../include/fec.h"
-#include "galois.h"
+#include <fec.h>
+#include <galois.h>
 
 int fec_init(fec **ctx, fec_param *param) {
     *ctx = malloc(sizeof(fec));
@@ -66,7 +66,7 @@ int fec_encode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count) {
     ctx->rank++;
 
     /* Insert the packet into the out_pkts */
-    (*out_pkts)[out_pkt_count].size = len;
+    (*out_pkts)[out_pkt_count].len = len;
     (*out_pkts)[out_pkt_count++].buf = pkt;
 
     /* Return if we have not received enough packets to generate repair packets */
@@ -98,7 +98,7 @@ int fec_encode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count) {
         }
 
         /* Insert the repair packet into the out_pkts */
-        (*out_pkts)[out_pkt_count].size =
+        (*out_pkts)[out_pkt_count].len =
             ctx->param->symbol_size + ctx->param->gen_size + rtp_hdr_len;
         (*out_pkts)[out_pkt_count++].buf = payload;
     }

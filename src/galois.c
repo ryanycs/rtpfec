@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "galois.h"
+#include <galois.h>
 
 static int field_size;
 static int *alpha;     // power representation of galois field
