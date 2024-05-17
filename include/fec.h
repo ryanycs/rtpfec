@@ -1,25 +1,16 @@
 #ifndef FEC_H
 #define FEC_H
 
-#define RTP_HEADER_SIZE 12
-#define MAX_COEFF_LEN 255
-#define MAX_PAYLOAD_LEN 1400
+#define RTP_HDR_LEN 12
+#define MAX_PACKET_NUM 10
 
-typedef struct packet packet;
+typedef struct fec_packet fec_packet;
 typedef struct fec_param fec_param;
 typedef struct fec fec;
 
 typedef unsigned char GF_ELEMENT;
 
 struct fec_packet {
-    unsigned char coeff[MAX_COEFF_LEN];
-    int coeff_len;
-
-    unsigned char payload[MAX_PAYLOAD_LEN];
-    int payload_len;
-};
-
-struct packet {
     void *buf;
     int len;
 };
@@ -33,12 +24,13 @@ struct fec_param {
 };
 
 struct fec {
-    struct fec_param *param;
+    fec_param *param;
     unsigned short seq;
     int rank; // rank of the matrix
 
     GF_ELEMENT **coeff_mat;   // coefficient matrix
     GF_ELEMENT **payload_mat; // payload matrix
+    fec_packet *out_pkts;     // output packets
 };
 
 /*
@@ -62,7 +54,7 @@ int fec_init(fec **ctx, fec_param *param);
  *
  * @return          0 if success, -1 if failed
  */
-int fec_encode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count);
+int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count);
 
 /*
  * Decode the FEC packet into RTP packets
@@ -75,7 +67,7 @@ int fec_encode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count);
  *
  * @return          0 if success, -1 if failed
  */
-int fec_decode(fec *ctx, void *pkt, int len, packet *out_pkts[], int *count);
+int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count);
 
 /*
  * Free the fec context
