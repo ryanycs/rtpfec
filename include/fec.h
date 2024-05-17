@@ -16,17 +16,18 @@ struct fec_packet {
 };
 
 struct fec_param {
-    int gf_power;      // power of the galois field (2^gf_power)
-    int gen_size;      // number of symbols in a generation
-    int symbol_size;   // size of a symbol in bytes
-    int n;             // fec(n, k)
-    unsigned short pt; // payload type, used to identify the source RTP & repair RTP
+    int gf_power;         // power of the galois field (2^gf_power)
+    int gen_size;         // number of symbols in a generation
+    int rtp_payload_size; // size of the RTP payload
+    int n;                // fec(n, k)
+    unsigned char pt;     // payload type, used to identify the source RTP & repair RTP
 };
 
 struct fec {
     fec_param *param;
     unsigned short seq;
-    int rank; // rank of the matrix
+    int rank;          // rank of the matrix
+    int out_pkt_count; // number of output packets
 
     GF_ELEMENT **coeff_mat;   // coefficient matrix
     GF_ELEMENT **payload_mat; // payload matrix
