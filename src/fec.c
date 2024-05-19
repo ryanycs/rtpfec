@@ -12,32 +12,32 @@ int fec_init(fec **ctx, fec_param *param) {
     }
 
     (*ctx)->param = param;
-    (*ctx)->seq = 0;
-    (*ctx)->rank = 0;
-    (*ctx)->out_pkt_count = 0;
+    (*ctx)->encode_seq = 0;
+    // (*ctx)->rank = 0;
+    (*ctx)->encode_count = 0;
 
     galois_init(param->gf_power);
 
     /* Allocate memory for the coefficient matrix */
-    (*ctx)->coeff_mat = malloc(param->n * sizeof(GF_ELEMENT *));
-    if (!(*ctx)->coeff_mat) {
+    (*ctx)->encode_coeff = malloc(param->n * sizeof(GF_ELEMENT *));
+    if (!(*ctx)->encode_coeff) {
         return -1;
     }
     for (int i = 0; i < param->n; i++) {
-        (*ctx)->coeff_mat[i] = malloc(param->gen_size * sizeof(GF_ELEMENT));
-        if (!(*ctx)->coeff_mat[i]) {
+        (*ctx)->encode_coeff[i] = malloc(param->gen_size * sizeof(GF_ELEMENT));
+        if (!(*ctx)->encode_coeff[i]) {
             return -1;
         }
     }
 
     /* Allocate memory for the payload matrix */
-    (*ctx)->payload_mat = malloc(param->n * sizeof(GF_ELEMENT *));
-    if (!(*ctx)->payload_mat) {
+    (*ctx)->encode_payload = malloc(param->n * sizeof(GF_ELEMENT *));
+    if (!(*ctx)->encode_payload) {
         return -1;
     }
     for (int i = 0; i < param->n; i++) {
-        (*ctx)->payload_mat[i] = malloc((RTP_HDR_LEN + param->rtp_payload_size) * sizeof(GF_ELEMENT));
-        if (!(*ctx)->payload_mat[i]) {
+        (*ctx)->encode_payload[i] = malloc((RTP_HDR_LEN + param->rtp_payload_size) * sizeof(GF_ELEMENT));
+        if (!(*ctx)->encode_payload[i]) {
             return -1;
         }
     }
@@ -60,87 +60,80 @@ int fec_init(fec **ctx, fec_param *param) {
 
 int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) {
     int out_pkt_count = 0;
+    int n = ctx->param->n;
+    int k = ctx->param->gen_size;
     int coeff_len = ctx->param->gen_size;
-    unsigned short seq;  // Sequence number of the incoming RTP packet
-    GF_ELEMENT *coeffs;  // pointer to ctx->coeff_mat[]
-    GF_ELEMENT *payload; // pointer to ctx->payload_mat[]
-    void *rtp_hdr;
+    unsigned short seq;         // Sequence number
+    GF_ELEMENT *coeff = NULL;   // Coefficients of the encode matrix
+    GF_ELEMENT *payload = NULL; // Payload of the encode matrix
 
     seq = ((char *)pkt)[2] << 8 | ((char *)pkt)[3];
-    // printf("seq = %d, ctx.seq = %d\n", seq, ctx->seq);
 
     /* Check if the packet is within the generation window */
-    if (seq >= ctx->seq + ctx->param->gen_size || ctx->seq == 0) {
+    if (seq >= ctx->encode_seq + ctx->param->gen_size || ctx->encode_seq == 0) {
         /* Set new generation window */
-        ctx->seq = seq;
-        ctx->rank = 0;
-        ctx->out_pkt_count = 0;
+        ctx->encode_seq = seq;
+        ctx->encode_count = 0;
     }
 
     /* Insert the packet into the encode matrix */
-    coeffs = ctx->coeff_mat[ctx->rank];
-    coeffs[ctx->rank] = 1;
-
-    payload = ctx->payload_mat[ctx->rank];
+    payload = ctx->encode_payload[ctx->encode_count];
     memcpy(payload, pkt, len);
 
     /* Insert the source RTP packet into the out_pkts */
-    memcpy(ctx->out_pkts[ctx->out_pkt_count].buf, pkt, len);
-    ctx->out_pkts[ctx->out_pkt_count].len = len;
+    memcpy(ctx->out_pkts[ctx->encode_count].buf, pkt, len);
+    ctx->out_pkts[ctx->encode_count].len = len;
 
-    out_pkts[out_pkt_count++] = ctx->out_pkts[ctx->out_pkt_count]; // Set the output packets
-    // printf("rank = %d\n", ctx->rank);
-    ctx->rank++;
-    ctx->out_pkt_count++;
+    out_pkts[out_pkt_count++] = ctx->out_pkts[ctx->encode_count++]; // Set the output packets
 
     /* Return if we have not received enough packets to generate repair packets */
-    if (ctx->rank < ctx->param->gen_size) {
+    if (ctx->encode_count < ctx->param->gen_size) {
         *count = out_pkt_count;
         return 0;
     }
 
     /* Create (n - k) repair packets */
-    for (int i = 0; i < ctx->param->n - ctx->param->gen_size; i++) {
+    for (int i = 0; i < n - k; i++) {
         /* Copy the RTP header */
-        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf, pkt, RTP_HDR_LEN);
+        memcpy(ctx->out_pkts[ctx->encode_count].buf, pkt, RTP_HDR_LEN);
 
         /* Modify the PT field to the repair packet type */
-        ((char *)ctx->out_pkts[ctx->out_pkt_count].buf)[1] &= 0x80;           // Clear the PT field
-        ((char *)ctx->out_pkts[ctx->out_pkt_count].buf)[1] |= ctx->param->pt; // Set the PT field
+        ((char *)ctx->out_pkts[ctx->encode_count].buf)[1] &= 0x80;           // Clear the PT field
+        ((char *)ctx->out_pkts[ctx->encode_count].buf)[1] |= ctx->param->pt; // Set the PT field
 
         /* initialize the encode matrix */
-        coeffs = ctx->coeff_mat[ctx->param->gen_size + i];
-        memset(coeffs, 0, ctx->param->gen_size * sizeof(GF_ELEMENT));
-        payload = ctx->payload_mat[ctx->param->gen_size + i];
-        // TODO: check the real size of the payload
+        coeff = ctx->encode_coeff[ctx->encode_count];
+        memset(coeff, 0, coeff_len * sizeof(GF_ELEMENT));
+        payload = ctx->encode_payload[ctx->encode_count];
         memset(payload, 0, (RTP_HDR_LEN + ctx->param->rtp_payload_size) * sizeof(GF_ELEMENT));
+        printf("done\n");
 
         /* Generate the RTP repair packet payload */
         for (int j = 0; j < ctx->param->gen_size; j++) {
-            unsigned char coeff;
-            coeff = rand() % (1 << ctx->param->gf_power);
+            unsigned char c; // Coefficient
+            c = rand() % (1 << ctx->param->gf_power);
 
             /* Set the coefficient in the encode matrix */
-            coeffs[j] = coeff;
+            coeff[j] = c;
 
             for (int k = 0; k < RTP_HDR_LEN + ctx->param->rtp_payload_size; k++) {
-                if (coeff == 0) {
+                if (c == 0) {
                     continue;
                 }
 
                 /* payload[k] = payload[k] + coeff * ctx->payload_mat[j][k] */
-                payload[k] = galois_add(payload[k], galois_mul(coeff, ctx->payload_mat[j][k]));
+                payload[k] = galois_add(payload[k], galois_mul(c, ctx->encode_payload[j][k]));
             }
         }
 
         /* Insert the repair packet into the out_pkts */
-        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf + RTP_HDR_LEN, coeffs, ctx->param->gen_size);
-        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf + RTP_HDR_LEN + ctx->param->gen_size, payload, RTP_HDR_LEN + ctx->param->rtp_payload_size);
-        ctx->out_pkts[ctx->out_pkt_count].len = ctx->param->rtp_payload_size + ctx->param->gen_size + RTP_HDR_LEN * 2;
-        out_pkts[out_pkt_count] = ctx->out_pkts[ctx->out_pkt_count];
+        memcpy(ctx->out_pkts[ctx->encode_count].buf + RTP_HDR_LEN, coeff, coeff_len);
+        memcpy(ctx->out_pkts[ctx->encode_count].buf + RTP_HDR_LEN + ctx->param->gen_size, payload, RTP_HDR_LEN + ctx->param->rtp_payload_size);
+        ctx->out_pkts[ctx->encode_count].len = ctx->param->rtp_payload_size + ctx->param->gen_size + RTP_HDR_LEN * 2;
+        out_pkts[out_pkt_count] = ctx->out_pkts[ctx->encode_count];
 
         out_pkt_count++;
-        ctx->out_pkt_count++;
+        ctx->encode_count++;
     }
 
     *count = out_pkt_count;
@@ -149,10 +142,11 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
 }
 
 int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) {
-    unsigned char cc;   // CSRC count
-    unsigned char pt;   // Payload type
-    unsigned short seq; // Sequence number
-    void *payload;
+    unsigned char cc;           // CSRC count
+    unsigned char pt;           // Payload type
+    unsigned short seq;         // Sequence number
+    GF_ELEMENT *coeffs = NULL;  // pointer to ctx->coeff_mat[]
+    GF_ELEMENT *payload = NULL; // pointer to ctx->payload_mat[]
 
     /* Get sequence number of the incoming RTP packet */
     seq = ((char *)pkt)[2] << 8 | ((char *)pkt)[3];
@@ -160,13 +154,13 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     /* Check if the sequence number is within the generation window */
     if (seq < ctx->seq) {
         /* Drop the packet */
-        count = 0;
+        *count = 0;
         return 0;
     } else if (ctx->seq + ctx->param->gen_size <= seq) {
         /* Clear the decode matrix */
         for (int i = 0; i < ctx->param->gen_size; i++) {
             memset(ctx->payload_mat[i], 0,
-                   ctx->param->rtp_payload_size * sizeof(GF_ELEMENT));
+                   (RTP_HDR_LEN + ctx->param->rtp_payload_size) * sizeof(GF_ELEMENT));
             memset(ctx->coeff_mat[i], 0, ctx->param->gen_size * sizeof(GF_ELEMENT));
         }
         /* Set new generation window */
@@ -174,12 +168,25 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     }
 
     pt = ((char *)pkt)[1] & 0x7F;
-    /* If the packet is a repair packet, we need to extract the repair payload */
-    if (pt == ctx->param->pt) {
-        cc = ((char *)pkt)[0] & 0x0F; // CSRC count
+    if (pt != ctx->param->pt) {
+        /* Insert the source RTP packet into the out_pkts */
+        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf, pkt, len);
+        ctx->out_pkts[ctx->out_pkt_count].len = len;
+        out_pkts[0] = ctx->out_pkts[ctx->out_pkt_count];
 
-        int rtp_hdr_len = 12 + cc * 4;
+        *count = 1;
+        return 0;
     }
+
+    /* If the packet is a repair packet, we need to extract the repair payload */
+    cc = ((char *)pkt)[0] & 0x0F; // CSRC count
+    int rtp_hdr_len = 12 + cc * 4;
+
+    /* Extract the encode matrix from the repair packet */
+    coeffs = ctx->coeff_mat[ctx->rank];
+    memcpy(coeffs, pkt + rtp_hdr_len, ctx->param->gen_size);
+    payload = ctx->payload_mat[ctx->rank];
+    memcpy(payload, pkt + rtp_hdr_len + ctx->param->gen_size, RTP_HDR_LEN + ctx->param->rtp_payload_size);
 
     /* upper triangular matrix */
 

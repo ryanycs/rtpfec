@@ -2,6 +2,7 @@
 #define FEC_H
 
 #define RTP_HDR_LEN 12
+#define MAX_GEN_SIZE 10
 #define MAX_PACKET_NUM 10
 
 typedef struct fec_packet fec_packet;
@@ -28,6 +29,15 @@ struct fec {
     unsigned short seq;
     int rank;          // rank of the matrix
     int out_pkt_count; // number of output packets
+
+    unsigned short encode_seq;   // sequence number of the encode matrix
+    int encode_count;            // number of packets been encoded
+    GF_ELEMENT **encode_coeff;   // encode coefficient matrix
+    GF_ELEMENT **encode_payload; // encode payload matrix
+
+    int decode_rank;             // rank of the decode matrix
+    GF_ELEMENT **decode_coeff;   // decode coefficient matrix
+    GF_ELEMENT **decode_payload; // decode payload matrix
 
     GF_ELEMENT **coeff_mat;   // coefficient matrix
     GF_ELEMENT **payload_mat; // payload matrix
