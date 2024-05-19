@@ -14,15 +14,16 @@ int fec_init(fec **ctx, fec_param *param) {
     (*ctx)->param = param;
     (*ctx)->seq = 0;
     (*ctx)->rank = 0;
+    (*ctx)->out_pkt_count = 0;
 
     galois_init(param->gf_power);
 
     /* Allocate memory for the coefficient matrix */
-    (*ctx)->coeff_mat = malloc(param->gen_size * sizeof(GF_ELEMENT *));
+    (*ctx)->coeff_mat = malloc(param->n * sizeof(GF_ELEMENT *));
     if (!(*ctx)->coeff_mat) {
         return -1;
     }
-    for (int i = 0; i < param->gen_size; i++) {
+    for (int i = 0; i < param->n; i++) {
         (*ctx)->coeff_mat[i] = malloc(param->gen_size * sizeof(GF_ELEMENT));
         if (!(*ctx)->coeff_mat[i]) {
             return -1;
@@ -30,12 +31,12 @@ int fec_init(fec **ctx, fec_param *param) {
     }
 
     /* Allocate memory for the payload matrix */
-    (*ctx)->payload_mat = malloc(param->gen_size * sizeof(GF_ELEMENT *));
+    (*ctx)->payload_mat = malloc(param->n * sizeof(GF_ELEMENT *));
     if (!(*ctx)->payload_mat) {
         return -1;
     }
-    for (int i = 0; i < param->gen_size; i++) {
-        (*ctx)->payload_mat[i] = malloc(param->rtp_payload_size * sizeof(GF_ELEMENT));
+    for (int i = 0; i < param->n; i++) {
+        (*ctx)->payload_mat[i] = malloc((RTP_HDR_LEN + param->rtp_payload_size) * sizeof(GF_ELEMENT));
         if (!(*ctx)->payload_mat[i]) {
             return -1;
         }
@@ -48,7 +49,7 @@ int fec_init(fec **ctx, fec_param *param) {
     }
     for (int i = 0; i < MAX_PACKET_NUM; i++) {
         // TODO: check the real size of the packet
-        (*ctx)->out_pkts[i].buf = malloc(param->rtp_payload_size + param->gen_size + RTP_HDR_LEN);
+        (*ctx)->out_pkts[i].buf = malloc(param->rtp_payload_size + param->gen_size + RTP_HDR_LEN * 2);
         if (!(*ctx)->out_pkts[i].buf) {
             return -1;
         }
@@ -66,13 +67,14 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     void *rtp_hdr;
 
     seq = ((char *)pkt)[2] << 8 | ((char *)pkt)[3];
-    printf("seq = %d, ctx.seq = %d\n", seq, ctx->seq);
+    // printf("seq = %d, ctx.seq = %d\n", seq, ctx->seq);
 
     /* Check if the packet is within the generation window */
     if (seq >= ctx->seq + ctx->param->gen_size || ctx->seq == 0) {
         /* Set new generation window */
         ctx->seq = seq;
         ctx->rank = 0;
+        ctx->out_pkt_count = 0;
     }
 
     /* Insert the packet into the encode matrix */
@@ -83,12 +85,13 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     memcpy(payload, pkt, len);
 
     /* Insert the source RTP packet into the out_pkts */
-    memcpy(ctx->out_pkts[ctx->rank].buf, pkt, len);
-    ctx->out_pkts[ctx->rank].len = len;
+    memcpy(ctx->out_pkts[ctx->out_pkt_count].buf, pkt, len);
+    ctx->out_pkts[ctx->out_pkt_count].len = len;
 
-    out_pkts[out_pkt_count++] = ctx->out_pkts[ctx->rank]; // Set the output packets
-    printf("rank = %d\n", ctx->rank);
+    out_pkts[out_pkt_count++] = ctx->out_pkts[ctx->out_pkt_count]; // Set the output packets
+    // printf("rank = %d\n", ctx->rank);
     ctx->rank++;
+    ctx->out_pkt_count++;
 
     /* Return if we have not received enough packets to generate repair packets */
     if (ctx->rank < ctx->param->gen_size) {
@@ -96,23 +99,21 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
         return 0;
     }
 
-    printf("Generate repair packets\n");
-
     /* Create (n - k) repair packets */
     for (int i = 0; i < ctx->param->n - ctx->param->gen_size; i++) {
         /* Copy the RTP header */
-        memcpy(ctx->out_pkts[out_pkt_count].buf, pkt, RTP_HDR_LEN);
+        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf, pkt, RTP_HDR_LEN);
 
         /* Modify the PT field to the repair packet type */
-        ((char *)ctx->out_pkts[out_pkt_count].buf)[1] &= 0x80;           // Clear the PT field
-        ((char *)ctx->out_pkts[out_pkt_count].buf)[1] |= ctx->param->pt; // Set the PT field
+        ((char *)ctx->out_pkts[ctx->out_pkt_count].buf)[1] &= 0x80;           // Clear the PT field
+        ((char *)ctx->out_pkts[ctx->out_pkt_count].buf)[1] |= ctx->param->pt; // Set the PT field
 
         /* initialize the encode matrix */
         coeffs = ctx->coeff_mat[ctx->param->gen_size + i];
         memset(coeffs, 0, ctx->param->gen_size * sizeof(GF_ELEMENT));
         payload = ctx->payload_mat[ctx->param->gen_size + i];
         // TODO: check the real size of the payload
-        memset(payload, 0, ctx->param->rtp_payload_size * sizeof(GF_ELEMENT));
+        memset(payload, 0, (RTP_HDR_LEN + ctx->param->rtp_payload_size) * sizeof(GF_ELEMENT));
 
         /* Generate the RTP repair packet payload */
         for (int j = 0; j < ctx->param->gen_size; j++) {
@@ -121,9 +122,8 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
 
             /* Set the coefficient in the encode matrix */
             coeffs[j] = coeff;
-            // ((char *)(*out_pkts)[out_pkt_count].buf)[RTP_HEADER_LEN + j] = coeff;
 
-            for (int k = 0; k < ctx->param->rtp_payload_size; k++) {
+            for (int k = 0; k < RTP_HDR_LEN + ctx->param->rtp_payload_size; k++) {
                 if (coeff == 0) {
                     continue;
                 }
@@ -134,11 +134,13 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
         }
 
         /* Insert the repair packet into the out_pkts */
-        memcpy(ctx->out_pkts[ctx->param->gen_size + i].buf + RTP_HDR_LEN, coeffs, ctx->param->gen_size);
-        memcpy(ctx->out_pkts[ctx->param->gen_size + i].buf + RTP_HDR_LEN + ctx->param->gen_size, payload, ctx->param->rtp_payload_size);
-        ctx->out_pkts[ctx->param->gen_size + i].len = ctx->param->rtp_payload_size + ctx->param->gen_size + RTP_HDR_LEN;
+        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf + RTP_HDR_LEN, coeffs, ctx->param->gen_size);
+        memcpy(ctx->out_pkts[ctx->out_pkt_count].buf + RTP_HDR_LEN + ctx->param->gen_size, payload, RTP_HDR_LEN + ctx->param->rtp_payload_size);
+        ctx->out_pkts[ctx->out_pkt_count].len = ctx->param->rtp_payload_size + ctx->param->gen_size + RTP_HDR_LEN * 2;
+        out_pkts[out_pkt_count] = ctx->out_pkts[ctx->out_pkt_count];
 
         out_pkt_count++;
+        ctx->out_pkt_count++;
     }
 
     *count = out_pkt_count;
