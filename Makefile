@@ -1,6 +1,6 @@
 IDIR = include
 CC = gcc
-CFALGS = -I$(IDIR) -fPIC
+CFALGS = -I$(IDIR) -fPIC -Wall
 
 LDIR = lib
 
