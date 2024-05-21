@@ -52,4 +52,8 @@ int main(int argc, char **argv) {
         print_packet(&encoded_pkts[i]);
     }
     printf("\n");
+
+    fec_destroy(ctx);
+
+    return 0;
 }

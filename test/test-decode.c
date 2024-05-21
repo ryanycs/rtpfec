@@ -68,4 +68,8 @@ int main(int argc, char **argv) {
             print_packet(&out_pkts[j]);
         }
     }
+
+    fec_destroy(ctx);
+
+    return 0;
 }
