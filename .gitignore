@@ -1,4 +1,11 @@
-*
+*.out
+*.o
+*.so
+*.a
+
+test-*
+server
+client
 
 !*.md
 !Makefile
