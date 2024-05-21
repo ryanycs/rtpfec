@@ -20,22 +20,23 @@ struct fec_param {
     int gf_power;         // power of the galois field (2^gf_power)
     int gen_size;         // number of symbols in a generation
     int rtp_payload_size; // size of the RTP payload
-    int n;                // fec(n, k)
+    int packet_num;       // number of packets in a generation
     unsigned char pt;     // payload type, used to identify the source RTP & repair RTP
 };
 
 struct fec {
     fec_param *param; // fec parameters
 
-    unsigned short encode_seq; // sequence number of the encode matrix
-    int encode_count;          // number of packets been encoded
-    GF_ELEMENT **encode_buf;   // buffer for storing the RTP source packets
-    fec_packet *encode_pkts;   // encoded packets buffer
+    int encode_gen;          // generation number of the encode matrix
+    int encode_count;        // number of packets been encoded
+    GF_ELEMENT **encode_buf; // buffer for storing the RTP source packets
+    fec_packet *encode_pkts; // encoded packets buffer
 
-    unsigned short decode_seq;   // sequence number of the decode matrix
-    int rank;                    // rank of the decode matrix
+    int decode_gen;              // generation number of the decode matrix
+    int decode_rank;             // rank of the decode matrix
     GF_ELEMENT **decode_coeff;   // decode coefficient matrix
     GF_ELEMENT **decode_payload; // decode payload matrix
+    int *been_decoded;           // flag for the packets that been decoded
 };
 
 /*
