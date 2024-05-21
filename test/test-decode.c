@@ -5,8 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define N 10
+#define N 20
 #define RTP_PKT_SIZE 20
+#define PKT_LOSS_RATE 0.4
 
 int main(int argc, char **argv) {
     int out_packet_count = 0;
@@ -52,4 +53,19 @@ int main(int argc, char **argv) {
         print_packet(&encoded_pkts[i]);
     }
     printf("\n");
+
+    for (int i = 0; i < out_packet_count; i++) {
+        if (rand() < RAND_MAX * PKT_LOSS_RATE) {
+            printf("Packet %d lost\n", i);
+            continue;
+        } else {
+            printf("Packet %d received\n", i);
+        }
+
+        fec_decode(ctx, encoded_pkts[i].buf, encoded_pkts[i].len, out_pkts, &count);
+
+        for (int j = 0; j < count; j++) {
+            print_packet(&out_pkts[j]);
+        }
+    }
 }
