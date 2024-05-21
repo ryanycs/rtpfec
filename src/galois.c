@@ -23,10 +23,6 @@ static int primitive_poly[] = {
     285  // x^8 + x^4 + x^3 + x^2 + 1
 };
 
-/*
- * Initialize galois field
- * @param m    power of the galois field (2^m)
- */
 void galois_init(int m) {
     if (m < 1 || m > 8) {
         fprintf(stderr, "galois_init: m should be in [1, 8]\n");
@@ -69,8 +65,7 @@ void galois_init(int m) {
 
 /*
  * Create multiplication table for galois field
- * galois_mul_table[i][j] = i * j = (alpha_inv[i] + alpha_inv[j]) % (field_size
- * - 1)
+ * galois_mul_table[i][j] = i * j = (alpha_inv[i] + alpha_inv[j]) % (field_size - 1)
  */
 void galois_create_mul_table() {
     for (int i = 0; i < field_size; ++i) {
@@ -87,9 +82,7 @@ void galois_create_mul_table() {
 
 /*
  * Create division table for galois field
- * galois_div_table[i][j] = i / j = (alpha_inv[i] - alpha_inv[j]) %
- * (field_size
- * - 1)
+ * galois_div_table[i][j] = i / j = (alpha_inv[i] - alpha_inv[j]) % (field_size - 1)
  */
 void galois_create_div_table() {
     for (int i = 0; i < field_size; ++i) {
@@ -110,33 +103,18 @@ void galois_create_div_table() {
     }
 }
 
-/*
- * Galois field addition
- */
 GF_ELEMENT galois_add(GF_ELEMENT a, GF_ELEMENT b) { return a ^ b; }
 
-/*
- * Galois field subtraction
- */
 GF_ELEMENT galois_sub(GF_ELEMENT a, GF_ELEMENT b) { return a ^ b; }
 
-/*
- * Galois field multiplication
- */
 GF_ELEMENT galois_mul(GF_ELEMENT a, GF_ELEMENT b) {
     return galois_mul_table[a][b];
 }
 
-/*
- * Galois field division
- */
 GF_ELEMENT galois_div(GF_ELEMENT a, GF_ELEMENT b) {
     return galois_div_table[a][b];
 }
 
-/*
- * Free memory allocated for galois field
- */
 void galois_destroy() {
     for (int i = 0; i < field_size; ++i) {
         free(galois_mul_table[i]);
