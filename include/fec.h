@@ -25,23 +25,17 @@ struct fec_param {
 };
 
 struct fec {
-    fec_param *param;
-    unsigned short seq;
-    int rank;          // rank of the matrix
-    int out_pkt_count; // number of output packets
+    fec_param *param; // fec parameters
 
-    unsigned short encode_seq;   // sequence number of the encode matrix
-    int encode_count;            // number of packets been encoded
-    GF_ELEMENT **encode_coeff;   // encode coefficient matrix
-    GF_ELEMENT **encode_payload; // encode payload matrix
+    unsigned short encode_seq; // sequence number of the encode matrix
+    int encode_count;          // number of packets been encoded
+    GF_ELEMENT **encode_buf;   // buffer for storing the RTP source packets
+    fec_packet *encode_pkts;   // encoded packets buffer
 
-    int decode_rank;             // rank of the decode matrix
+    unsigned short decode_seq;   // sequence number of the decode matrix
+    int rank;                    // rank of the decode matrix
     GF_ELEMENT **decode_coeff;   // decode coefficient matrix
     GF_ELEMENT **decode_payload; // decode payload matrix
-
-    GF_ELEMENT **coeff_mat;   // coefficient matrix
-    GF_ELEMENT **payload_mat; // payload matrix
-    fec_packet *out_pkts;     // output packets
 };
 
 /*
