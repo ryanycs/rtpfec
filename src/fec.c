@@ -299,7 +299,7 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
 
 int fec_destroy(fec *ctx) {
     /* Free the galois field */
-    free_galois();
+    galois_destroy();
 
     /* Free the encode buffer */
     for (int i = 0; i < ctx->param->packet_num; i++) {

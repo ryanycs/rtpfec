@@ -137,7 +137,7 @@ GF_ELEMENT galois_div(GF_ELEMENT a, GF_ELEMENT b) {
 /*
  * Free memory allocated for galois field
  */
-void free_galois() {
+void galois_destroy() {
     for (int i = 0; i < field_size; ++i) {
         free(galois_mul_table[i]);
         free(galois_div_table[i]);
