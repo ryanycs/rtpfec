@@ -76,12 +76,12 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count);
 int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count);
 
 /*
- * Free the fec context
+ * Destroy the fec context
  *
  * @param ctx
  *
  * @return          0 if success, -1 if failed
  */
-int fec_free(fec *ctx);
+int fec_destroy(fec *ctx);
 
 #endif /* FEC_H */

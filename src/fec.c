@@ -171,12 +171,6 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     GF_ELEMENT *coeff = NULL;                                               // pointer to repair packet's coding vector
     GF_ELEMENT *payload = NULL;                                             // pointer to repair packet's payload
 
-    // for (int i = 0; i < len; i++) {
-    //     printf("%02X ", ((unsigned char *)pkt)[i]);
-    // }
-    // printf("\n");
-    // printf("seq: %d\n", seq);
-
     generation = seq / ctx->param->gen_size;
 
     /* Check if the sequence number is within the generation window */
@@ -299,6 +293,43 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     }
 
     *count = out_pkt_count;
+
+    return 0;
+}
+
+int fec_destroy(fec *ctx) {
+    /* Free the galois field */
+    free_galois();
+
+    /* Free the encode buffer */
+    for (int i = 0; i < ctx->param->packet_num; i++) {
+        free(ctx->encode_buf[i]);
+    }
+    free(ctx->encode_buf);
+
+    /* Free the encode packets */
+    for (int i = 0; i < MAX_PACKET_NUM; i++) {
+        free(ctx->encode_pkts[i].buf);
+    }
+    free(ctx->encode_pkts);
+
+    /* Free the decode coefficient matrix */
+    for (int i = 0; i < ctx->param->gen_size; i++) {
+        free(ctx->decode_coeff[i]);
+    }
+    free(ctx->decode_coeff);
+
+    /* Free the decode payload */
+    for (int i = 0; i < ctx->param->gen_size; i++) {
+        free(ctx->decode_payload[i]);
+    }
+    free(ctx->decode_payload);
+
+    /* Free the been_decoded flag */
+    free(ctx->been_decoded);
+
+    /* Free the fec context */
+    free(ctx);
 
     return 0;
 }
