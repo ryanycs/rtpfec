@@ -34,9 +34,9 @@ struct fec {
 
     int decode_gen;              // generation number of the decode matrix
     int decode_rank;             // rank of the decode matrix
+    int *been_decoded;           // flag for the packets that been decoded
     GF_ELEMENT **decode_coeff;   // decode coefficient matrix
     GF_ELEMENT **decode_payload; // decode payload matrix
-    int *been_decoded;           // flag for the packets that been decoded
 };
 
 /*
