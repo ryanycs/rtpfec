@@ -1,8 +1,6 @@
-*.out
-*.o
-*.so
-*.a
-test-*
+*
 
+!*.md
+!Makefile
 !*.c
 !*.h
