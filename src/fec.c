@@ -41,7 +41,6 @@ int fec_init(fec **ctx, fec_param *param) {
         return -1;
     }
     for (int i = 0; i < MAX_PACKET_NUM; i++) {
-        // TODO: check the real size of the packet
         (*ctx)->encode_pkts[i].buf = malloc(param->rtp_payload_size + param->gen_size + RTP_HDR_LEN * 2);
         if (!(*ctx)->encode_pkts[i].buf) {
             return -1;
@@ -86,7 +85,7 @@ int fec_encode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     int out_pkt_count = 0;
     int n = ctx->param->packet_num;
     int generation;
-    unsigned short seq = ((char *)pkt)[2] << 8 | ((char *)pkt)[3]; // Sequence number
+    unsigned short seq = ((char *)pkt)[2] << 8 | ((unsigned char *)pkt)[3]; // Sequence number
     GF_ELEMENT *coeff = NULL;                                      // Pointer to the coding vector of the RTP repair packet
     GF_ELEMENT *payload = NULL;                                    // Pointer to the payload of the RTP repair packet
 
@@ -166,7 +165,7 @@ int fec_decode(fec *ctx, void *pkt, int len, fec_packet out_pkts[], int *count) 
     int generation;
     unsigned char cc = ((unsigned char *)pkt)[0] & 0x0F;                    // CSRC count
     unsigned char pt = ((unsigned char *)pkt)[1] & 0x7F;                    // Payload type
-    unsigned short seq = ((unsigned char *)pkt)[2] << 8 | ((char *)pkt)[3]; // Sequence number
+    unsigned short seq = ((unsigned char *)pkt)[2] << 8 | ((unsigned char *)pkt)[3]; // Sequence number
     int rtp_hdr_len = 12 + cc * 4;                                          // Length of the RTP header
     GF_ELEMENT *coeff = NULL;                                               // pointer to repair packet's coding vector
     GF_ELEMENT *payload = NULL;                                             // pointer to repair packet's payload
