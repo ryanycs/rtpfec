@@ -3,7 +3,7 @@
 
 #define RTP_HDR_LEN 12
 #define MAX_GEN_SIZE 10
-#define MAX_PACKET_NUM 10
+#define MAX_PACKET_NUM 30
 
 typedef struct fec_packet fec_packet;
 typedef struct fec_param fec_param;
