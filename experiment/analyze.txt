@@ -1,0 +1,40 @@
+loss rate received
+0  1000 1000
+5  1000  957
+10 1000  912
+15 978  865
+20 973  818
+25 916  763
+30 848  691
+35 804  643
+40 740  590
+
+rtp_decoded = 765, n = 790, recovery_rate = 96.84%
+loss rate increased to 15
+rtp_decoded = 700, n = 734, recovery_rate = 95.37%
+loss rate increased to 20
+rtp_decoded = 660, n = 702, recovery_rate = 94.02%
+loss rate increased to 25
+rtp_decoded = 608, n = 653, recovery_rate = 93.11%
+loss rate increased to 30
+rtp_decoded = 576, n = 623, recovery_rate = 92.46%
+loss rate increased to 35
+rtp_decoded = 516, n = 575, recovery_rate = 89.74%
+loss rate increased to 40
+rtp_decoded = 470, n = 545, recovery_rate = 86.24%
+loss rate increased to 45
+
+rtp_decoded = 733, n = 752, recovery_rate = 97.47%
+loss rate increased to 15
+rtp_decoded = 668, n = 673, recovery_rate = 99.26%
+loss rate increased to 20
+rtp_decoded = 591, n = 624, recovery_rate = 94.71%
+loss rate increased to 25
+rtp_decoded = 573, n = 602, recovery_rate = 95.18%
+loss rate increased to 30
+rtp_decoded = 576, n = 623, recovery_rate = 92.46%
+loss rate increased to 35
+rtp_decoded = 506, n = 537, recovery_rate = 94.23%
+loss rate increased to 40
+rtp_decoded = 450, n = 484, recovery_rate = 92.98%
+loss rate increased to 45
