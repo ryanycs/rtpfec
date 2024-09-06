@@ -2,15 +2,3 @@
 *.o
 *.so
 *.a
-*.png
-
-test-*
-server
-client
-ex1_server
-ex1_client
-
-!*.md
-!Makefile
-!*.c
-!*.h
