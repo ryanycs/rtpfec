@@ -1,3 +1,8 @@
+
+## About
+
+This is a simple RTP server and client implementation. The server sends RTP packets to the client, and the client receives the packets with a certain packet loss rate.
+
 ## Build
 
 ```bash
