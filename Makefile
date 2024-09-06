@@ -2,10 +2,11 @@ IDIR = include
 CC = gcc
 CFALGS = -I$(IDIR) -fPIC -Wall
 
+ODIR = build
 LDIR = lib
 
 DEPS = $(IDIR)/fec.h $(IDIR)/galois.h
-OBJ = fec.o galois.o
+OBJ = $(ODIR)/fec.o $(ODIR)/galois.o
 TARGET = libfec.so
 
 all: $(TARGET)
@@ -14,10 +15,12 @@ $(TARGET): $(OBJ)
 	[ -d $(LDIR) ] || mkdir $(LDIR)
 	$(CC) -shared -o $(LDIR)/$@ $^
 
-%.o: src/%.c $(DEPS)
+$(ODIR)/%.o: src/%.c $(DEPS)
+	[ -d $(ODIR) ] || mkdir $(ODIR)
 	$(CC) -c -o $@ $< $(CFALGS)
 
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ) $(LDIR)/$(TARGET)
+	rm -f $(ODIR)/*.o $(LDIR)/$(TARGET)
+	rm -rf $(ODIR) $(LDIR)
