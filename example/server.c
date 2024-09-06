@@ -36,12 +36,11 @@ void rtp_encode(char *buf) {
 
 int main(int argc, char **argv) {
     fec *ctx;
-    fec_param param = {
-        .gf_power = 8,
-        .gen_size = 4,
-        .rtp_payload_size = RTP_PAYLOAD_SIZE,
-        .packet_num = 8,
-        .pt = 97};
+    fec_param param = {.gf_power = 8,
+                       .gen_size = 4,
+                       .rtp_payload_size = RTP_PAYLOAD_SIZE,
+                       .packet_num = 8,
+                       .pt = 97};
     fec_packet out_pkts[MAX_PACKET_NUM];
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
@@ -68,7 +67,8 @@ int main(int argc, char **argv) {
     server_addr.sin_addr.s_addr = inet_addr(argv[1]);
     server_addr.sin_port = htons(atoi(argv[2]));
 
-    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) <
+        0) {
         fprintf(stderr, "Failed to bind socket\n");
         close(sockfd);
         return 1;
@@ -78,31 +78,36 @@ int main(int argc, char **argv) {
     while (1) {
         int count = 0;
         socklen_t client_addr_len = sizeof(client_addr);
-        int len = recvfrom(sockfd, buf, sizeof(buf), 0, (struct sockaddr *)&client_addr, &client_addr_len);
+        int len = recvfrom(sockfd, buf, sizeof(buf), 0,
+                           (struct sockaddr *)&client_addr, &client_addr_len);
         if (len < 0) {
             fprintf(stderr, "Failed to receive data\n");
             break;
         }
 
-        printf("Client %s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+        printf("Client %s:%d connected\n", inet_ntoa(client_addr.sin_addr),
+               ntohs(client_addr.sin_port));
         printf("Data: %s\n", buf);
 
         for (int i = 0; i < atoi(argv[3]); i++) {
             rtp_encode(rtp_buf);
-            fec_encode(ctx, rtp_buf, RTP_HEADER_SIZE + RTP_PAYLOAD_SIZE, out_pkts, &count);
+            fec_encode(ctx, rtp_buf, RTP_HEADER_SIZE + RTP_PAYLOAD_SIZE,
+                       out_pkts, &count);
             for (int j = 0; j < count; j++) {
                 printf("Send packet:\n");
                 for (int k = 0; k < out_pkts[j].len; k++) {
                     printf("%02X ", ((unsigned char *)out_pkts[j].buf)[k]);
                 }
                 printf("\n\n");
-                sendto(sockfd, out_pkts[j].buf, out_pkts[j].len, 0, (struct sockaddr *)&client_addr, client_addr_len);
+                sendto(sockfd, out_pkts[j].buf, out_pkts[j].len, 0,
+                       (struct sockaddr *)&client_addr, client_addr_len);
 
                 sleep(1);
             }
         }
 
-        sendto(sockfd, "End!", 5, 0, (struct sockaddr *)&client_addr, client_addr_len);
+        sendto(sockfd, "End!", 5, 0, (struct sockaddr *)&client_addr,
+               client_addr_len);
     }
 
     close(sockfd);

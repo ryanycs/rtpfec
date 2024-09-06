@@ -6,21 +6,23 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#define RTP_PAYLOAD_SIZE 16
+
 int main(int argc, char **argv) {
     fec *ctx;
-    fec_param param = {
-        .gf_power = 8,
-        .gen_size = 4,
-        .rtp_payload_size = 16,
-        .packet_num = 8,
-        .pt = 97};
+    fec_param param = {.gf_power = 8,
+                       .gen_size = 4,
+                       .rtp_payload_size = RTP_PAYLOAD_SIZE,
+                       .packet_num = 8,
+                       .pt = 97};
     fec_packet out_pkts[MAX_PACKET_NUM];
     int sockfd;
     struct sockaddr_in server_addr;
     char buf[1024] = {0};
 
     if (argc != 4) {
-        fprintf(stderr, "Usage: %s <serverIP> <serverPort> <lossRate>\n", argv[0]);
+        fprintf(stderr, "Usage: %s <serverIP> <serverPort> <lossRate>\n",
+                argv[0]);
         return 1;
     }
 
@@ -39,7 +41,8 @@ int main(int argc, char **argv) {
     server_addr.sin_addr.s_addr = inet_addr(argv[1]);
     server_addr.sin_port = htons(atoi(argv[2]));
 
-    sendto(sockfd, "Start!", 6, 0, (struct sockaddr *)&server_addr, sizeof(server_addr));
+    sendto(sockfd, "Start!", 6, 0, (struct sockaddr *)&server_addr,
+           sizeof(server_addr));
 
     while (1) {
         int count = 0;
